@@ -1,0 +1,103 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: octant-ns
+  labels:
+    name: octant
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: octant
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - "*"
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - "*"
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: octant-clusterrolebinding
+subjects:
+  - kind: ServiceAccount
+    name: octant-sa
+    namespace: octant-ns
+roleRef:
+  kind: ClusterRole
+  name: octant
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: octant-sa
+  namespace: octant-ns
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: octant
+  namespace: octant-ns
+spec:
+  selector:
+    app: octant
+  type: NodePort
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30800
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octant
+  namespace: octant-ns
+  labels:
+    app: octant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: octant
+  template:
+    metadata:
+      labels:
+        app: octant
+    spec:
+      serviceAccountName: octant-sa
+      containers:
+        - name: octant
+          image: dmytronasyrov/octant:latest
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: 300Mi
+              cpu: 500m
+            limits:
+              memory: 700Mi
+              cpu: 900m
+
+---
